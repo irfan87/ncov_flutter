@@ -1,18 +1,37 @@
 import 'package:coronavirus_rest_api_flutter_course/app/services/api.dart';
 import 'package:coronavirus_rest_api_flutter_course/app/services/api_service.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart';
 
 class DataRepository {
   final APIService apiService;
 
   DataRepository({@required this.apiService});
 
-  Future<int> getEndpointData(Endpoint endpoint) async {
-    final accessToken = await apiService.getAccessToken();
+  String _accessToken;
 
-    return await apiService.getEndpointData(
-      accessToken: accessToken,
-      endpoint: endpoint,
-    );
+  Future<int> getEndpointData(Endpoint endpoint) async {
+    try {
+      if (_accessToken == null) {
+        _accessToken = await apiService.getAccessToken();
+      }
+
+      return await apiService.getEndpointData(
+        accessToken: _accessToken,
+        endpoint: endpoint,
+      );
+    } on Response catch (response) {
+      // if unathorized, get access token again
+      if (response.statusCode == 401) {
+        _accessToken = await apiService.getAccessToken();
+
+        return await apiService.getEndpointData(
+          accessToken: _accessToken,
+          endpoint: endpoint,
+        );
+      }
+
+      rethrow;
+    }
   }
 }
